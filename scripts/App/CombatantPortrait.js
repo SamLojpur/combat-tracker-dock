@@ -153,6 +153,27 @@ export class CombatantPortrait {
         if (this.token.hover) this.token._onHoverOut(event);
     }
 
+    activateButton (
+        combat,
+        combatant,
+        ev
+        ) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (!combat) return;
+            const target = ev.currentTarget;
+            const isActive = combat.combatant?.id === combatant
+            if (!combatant) return;
+            if (isActive) {
+                console.log("deactivate")
+                combat.deactivateCombatant(combatant);
+            } else {
+                console.log("activate")
+                combat.activateCombatant(combatant);
+        }
+    }
+    
+
     async renderInner() {
         const data = await this.getData();
         this.element.classList.toggle("hidden", !data);
@@ -172,6 +193,18 @@ export class CombatantPortrait {
         } else {
             this.element.setAttribute("data-tooltip-direction", "");
         }
+
+        const combatant = this.combatant;
+        const pending = combatant?.activations.value ?? 0;
+        const done = combatant?.combat?.combatant === combatant ? 1 : 0;
+
+        const { icon, deactivate } = game.settings.get(game.system.id, "combat-tracker-appearance");
+        $(this.element)
+        .find(".combatant-buttons")
+        .prepend(
+            `<a class="fas ${icon} activate" data-action="activateCombatant"></a>`.repeat(pending) +
+            `<i class="fas ${deactivate} activate" data-control="deactivateCombatant"></i>`.repeat(done)
+        ).on("click", ev => this.activateButton(this.combat, combatant.id, ev));
 
         this.element.classList.toggle("active", data.css.includes("active"));
         this.element.classList.toggle("visible", data.css.includes("hidden"));

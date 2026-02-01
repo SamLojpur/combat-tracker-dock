@@ -35,8 +35,45 @@ export class CombatDock extends Application {
         };
     }
 
+    getCombatantStatusHelper(combatant) {
+        const ONGOING = 0
+        const UPCOMING = 1
+        const PASSED = 2
+        let output
+        if (combatant.flags.lancer.activations.value == 0) {
+            const currentTurnCombatant = this.combat.combatant
+            if (currentTurnCombatant && currentTurnCombatant.actorId === combatant.actorId) {
+                output = ONGOING
+            } else {
+                output = PASSED
+            }
+        } else {
+            output = UPCOMING
+        }
+        return output
+    }
+
     get sortedCombatants() {
-        return Array.from(this.combat.combatants.contents.sort(this.combat._sortCombatants));
+        const output =  Array.from(this.combat.combatants.contents).sort((a, b) => {
+            const statusA = this.getCombatantStatusHelper(a);
+            const statusB = this.getCombatantStatusHelper(b);
+            
+            if (statusA !== statusB) {
+                return statusA - statusB;
+            }
+
+            // TODO maybe sort by faction?
+            
+            // Tiebreak by actorId
+            // If actorId is a string:
+            return a.actorId.localeCompare(b.actorId);
+        });
+
+        console.log("HI")
+        output.forEach(c => console.log(this.getCombatantStatusHelper(c), c.name))
+        console.log("BAI")
+
+        return output
     }
 
     get trueCarousel() {
@@ -249,28 +286,15 @@ export class CombatDock extends Application {
 
         if (!this.trueCarousel) return this.portraits.forEach((p) => p.element.style.setProperty("order", combatants.indexOf(p.combatant)));
 
-        const isLeftAligned = this.leftAligned;
-
-        //order combatants so that the current combatant is at the center
-        const currentCombatant = this.combat.combatant;
-        const currentCombatantIndex = combatants.findIndex((c) => c === currentCombatant) + combatants.length;
-        const tempCombatantList = [...combatants, ...combatants, ...combatants];
-        const halfLength = isLeftAligned ? combatants.length : Math.floor(combatants.length / 2);
-        const orderedCombatants = tempCombatantList.slice(currentCombatantIndex - halfLength, currentCombatantIndex + halfLength + 1);
-
-        const lastCombatant = this.sortedCombatants[this.sortedCombatants.length - 1];
-
         this.portraits.forEach((p) => {
-            const combatant = orderedCombatants.find((c) => c === p.combatant);
-            const index = orderedCombatants.findIndex((c) => c === combatant);
+            const combatant = combatants.find((c) => c === p.combatant);
+            const index = combatants.findIndex((c) => c === combatant);
             p.element.style.setProperty("order", index * 100);
         });
 
-        //get last combatant's order
-        const lastCombatantOrder = this.portraits.find((p) => p.combatant === lastCombatant)?.element?.style?.order ?? 999999;
-        //set separator's order to last combatant's order + 1
+        const firstPassedOrder = Math.min(...this.portraits.filter((p) => this.getCombatantStatusHelper(p.combatant) === 2).map(p => parseInt(p?.element?.style?.order)), 999999);
 
-        separator.style.setProperty("order", parseInt(lastCombatantOrder) + 1);
+        separator.style.setProperty("order", firstPassedOrder - 50);
     }
 
     updateStartEndButtons() {
@@ -334,6 +358,8 @@ export class CombatDock extends Application {
         this.portraits.forEach((p) => p.renderInner());
         this.updateStartEndButtons();
     }
+
+    //https://github.com/Eranziel/foundryvtt-lancer/blob/9fddbe556c39668a668999315c80fbd2a91ffd5c/src/module/combat/lancer-combat.ts#L118-L129
 
     _onCombatTurn(combat, updates, update) {
         if (!("turn" in updates) && !("round" in updates)) return;

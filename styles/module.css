@@ -273,6 +273,11 @@
   transition: opacity 0.2s ease-in-out;
   pointer-events: all;
 }
+#combat-dock .combatant-wrapper .combatant-buttons .activate {
+  font-size: calc(var(--combatant-portrait-size) * 0.20);
+  margin: -0.2rem;
+  margin-right: -0.1rem;
+}
 #combat-dock .combatant-wrapper .combatant-buttons i:hover {
   cursor: pointer;
   text-shadow: 0px 0px 5px;
